@@ -12,7 +12,7 @@ e-commerce-backend
 
 1\. Clone this repo: `git clone \[your-repo-url]`
 
-2\. Copy `.env.example` to `.env` and set your passwords
+2\. Copy `.env.example` to `.env`, and set your passwords  `.env.example` ist in `k-ecommerceApp` Folder
 
 3\. Run `docker-compose up`  docker-compose.yml ist in k-ecommerceApp folder
 
