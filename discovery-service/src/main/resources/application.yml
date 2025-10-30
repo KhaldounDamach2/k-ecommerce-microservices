@@ -1,0 +1,8 @@
+spring:
+  application:
+    name: discovery-service
+  cloud:
+    config:
+      enabled: false # Disable config server for Eureka
+server:
+  port: 8761 # Force correct port

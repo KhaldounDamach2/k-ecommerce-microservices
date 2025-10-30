@@ -1,0 +1,264 @@
+
+version: '3.8'
+
+services:
+
+  # CONFIG-SERVER
+  config-server:
+    build: ../config-server
+    container_name: config-server
+    ports:
+      - "8888:8888"
+    networks:
+      - microservices-knet
+    environment:
+      SPRING_PROFILES_ACTIVE: native
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -o /dev/null -w '%{http_code}' http://config-server:8888/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 15
+    restart: unless-stopped
+
+
+  #  PG-ADMIN
+  pgadmin:
+    container_name: ms_kpgadmin
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-pgadmin4@pgadmin.org}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    volumes:
+      - pgadmin:/var/lib/pgadmin
+    ports:
+      - "5050:80"
+    networks:
+      - microservices-knet
+    restart: unless-stopped
+
+  # EUREKA DISCOVERY SERVER
+  discovery-service:
+    build: ../discovery-service
+    container_name: discovery-service
+    ports:
+      - "8761:8761"
+    depends_on:
+      - config-server
+      #  condition: service_healthy
+    networks:
+      - microservices-knet
+    environment:
+      SERVER_PORT: 8761
+      SPRING_PROFILES_ACTIVE: default
+      EUREKA_CLIENT_REGISTER_WITH_EUREKA: "false"
+      EUREKA_CLIENT_FETCH_REGISTRY: "false"
+      EUREKA_INSTANCE_HOSTNAME: "discovery-service"
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8761/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 15s
+      retries: 20
+    restart: always
+    
+    
+  # CUSTOMER-SERVICE
+  customer-db:
+    image: postgres
+    container_name: customer-db
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: kcustomerdb
+    volumes:
+    - customer-data:/data/postgres  
+    ports:
+      - "5433:5432"
+    networks:
+      - microservices-knet
+    restart: unless-stopped
+
+  customer-service:
+    build: ../customer-service
+    container_name: customer-service
+    ports:
+      - "8051:8051"
+    depends_on:
+      - discovery-service
+        #condition: service_healthy
+      - customer-db
+        #condition: service_healthy
+    networks:
+      - microservices-knet
+    environment:
+      SPRING_PROFILES_ACTIVE: default
+      SPRING_CLOUD_CONFIG_URI: http://config-server:8888
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka
+      SPRING_DATASOURCE_URL: jdbc:postgresql://customer-db:5432/kcustomerdb
+      SPRING_DATASOURCE_USERNAME: ${DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      SPRING_CLOUD_CONFIG_RETRY_INITIAL_INTERVAL: 2000
+      SPRING_CLOUD_CONFIG_RETRY_MAX_INTERVAL: 5000
+      SPRING_CLOUD_CONFIG_RETRY_MAX_ATTEMPTS: 15
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8051/actuator/health"]
+      interval: 30s
+      timeout: 15s
+      retries: 20
+    restart: always
+   
+  # ORDER-SERVICE
+  order-db:
+    image: postgres
+    container_name: order-db
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: korderdb
+    volumes:
+    - order-data:/data/postgres  
+    ports:
+      - "5436:5432"
+    networks:
+      - microservices-knet
+    restart: unless-stopped
+
+  order-service:
+    build: ../order-service
+    container_name: order-service
+    ports:
+      - "8054:8054"
+    depends_on:
+      - discovery-service
+        #condition: service_healthy
+      - order-db
+        #condition: service_healthy
+    networks:
+      - microservices-knet
+    environment:
+      SPRING_PROFILES_ACTIVE: default
+      SPRING_CLOUD_CONFIG_URI: http://config-server:8888
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka
+      SPRING_DATASOURCE_URL: jdbc:postgresql://order-db:5432/korderdb
+      SPRING_DATASOURCE_USERNAME: ${DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      SPRING_CLOUD_CONFIG_RETRY_INITIAL_INTERVAL: 2000
+      SPRING_CLOUD_CONFIG_RETRY_MAX_INTERVAL: 5000
+      SPRING_CLOUD_CONFIG_RETRY_MAX_ATTEMPTS: 15
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8054/actuator/health"]
+      interval: 30s
+      timeout: 15s
+      retries: 20
+    restart: always  
+
+
+  # PRODUCT-SERVICE  
+  product-db:
+    image: postgres
+    container_name: product-db
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: kproductdb
+    volumes:
+      - product-data:/data/postgres
+    ports:
+      - "5434:5432"
+    networks:
+      - microservices-knet
+    restart: unless-stopped
+
+  product-service:
+    build: ../product-service
+    container_name: product-service
+    ports:
+      - "8052:8052"
+    depends_on:
+      - discovery-service
+      - product-db
+    networks:
+      - microservices-knet
+    environment:
+      SPRING_PROFILES_ACTIVE: default
+      SPRING_CLOUD_CONFIG_URI: http://config-server:8888
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka
+      SPRING_DATASOURCE_URL: jdbc:postgresql://product-db:5432/kproductdb
+      SPRING_DATASOURCE_USERNAME: ${DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      SPRING_FLYWAY_ENABLED: "true"
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      SPRING_CLOUD_CONFIG_RETRY_INITIAL_INTERVAL: 2000
+      SPRING_CLOUD_CONFIG_RETRY_MAX_INTERVAL: 5000
+      SPRING_CLOUD_CONFIG_RETRY_MAX_ATTEMPTS: 15
+      # Add file upload specific environment variables
+      APP_UPLOAD_DIR: /app/uploads
+      APP_CSV_DIR: /app/csvFolder
+    volumes:
+      # Add volume mounts for file uploads
+      - ./product-uploads:/app/uploads
+      - ./product-csv:/app/csvFolder
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8052/actuator/health"]
+      interval: 30s
+      timeout: 15s
+      retries: 20
+    restart: always  
+
+
+# CART-SERVICE  
+  cart-db:
+    image: postgres
+    container_name: cart-db
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: kcartdb
+    volumes:
+      - cart-data:/data/postgres
+    ports:
+      - "5435:5432"
+    networks:
+      - microservices-knet
+    restart: unless-stopped
+
+  cart-service:
+    build: ../cart-service
+    container_name: cart-service
+    ports:
+      - "8053:8053"
+    depends_on:
+      - discovery-service
+      - cart-db
+    networks:
+      - microservices-knet
+    environment:
+      SPRING_PROFILES_ACTIVE: default
+      SPRING_CLOUD_CONFIG_URI: http://config-server:8888
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka
+      SPRING_DATASOURCE_URL: jdbc:postgresql://cart-db:5432/kcartdb
+      SPRING_DATASOURCE_USERNAME: ${DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      SPRING_FLYWAY_ENABLED: "true"
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      SPRING_CLOUD_CONFIG_RETRY_INITIAL_INTERVAL: 2000
+      SPRING_CLOUD_CONFIG_RETRY_MAX_INTERVAL: 5000
+      SPRING_CLOUD_CONFIG_RETRY_MAX_ATTEMPTS: 15
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8053/actuator/health"]
+      interval: 30s
+      timeout: 15s
+      retries: 20
+    restart: always
+
+volumes:
+  postgres:
+  pgadmin:
+  product-data:
+  customer-data:
+  order-data:
+  cart-data:
+
+networks:
+  microservices-knet:

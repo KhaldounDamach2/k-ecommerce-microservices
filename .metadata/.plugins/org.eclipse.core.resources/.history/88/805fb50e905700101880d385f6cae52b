@@ -1,0 +1,15 @@
+package com.dam.k_ecommerce.repository;
+
+import java.util.Optional;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import com.dam.k_ecommerce.model.Client;
+
+public interface ClientRepository extends JpaRepository<Client, Long> {
+
+	@Query(value = "SELECT c.* FROM Client c WHERE c.clientName = :clientName AND c.email = :email", nativeQuery = true)
+	public Optional<Client> findByNameAndEmail(@Param("name") String clientName, @Param("email") String email);
+}

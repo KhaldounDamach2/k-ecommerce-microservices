@@ -1,0 +1,26 @@
+spring:
+  profiles:
+    active: native
+  application:
+    name: config-server
+  cloud:
+    config:
+      server:
+        native:
+          search-locations: classpath:/configurations #you can here specify to github for example
+  management:
+    endpoint:
+      health:
+        enabled: true
+    endpoints:
+      web:
+        exposure:
+          include: health
+    health:
+      defaults:
+        enabled: true
+      status:
+        http-mapping:
+          UP: 200   
+server:
+  port: 8888

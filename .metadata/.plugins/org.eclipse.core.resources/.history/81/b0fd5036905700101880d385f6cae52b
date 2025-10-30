@@ -1,0 +1,20 @@
+package com.dam.k_ecommerce.repository;
+
+import java.util.Optional;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import com.dam.k_ecommerce.model.ProductVariantPhoto;
+
+public interface ProductVariantPhotoRepository extends JpaRepository<ProductVariantPhoto, Long> {
+
+	@Query(value = "SELECT * FROM product_variant_photo WHERE prod_variant_id = :variantId AND url = :url", nativeQuery = true)
+	public Optional<ProductVariantPhoto> findByVariantIdAndUrl(@Param("variantId") Long variantId, @Param("url") String url);
+
+	// Custom query methods can be defined here if needed
+	// For example, to find product variant photos by specific attributes or
+	// conditions
+
+}

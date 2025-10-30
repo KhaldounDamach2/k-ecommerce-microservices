@@ -1,0 +1,100 @@
+
+version: '3.8'
+
+services:
+  postgresql:
+    container_name: ms_pg
+    image: postgres
+    environment:
+      POSTGRES_USER: damach
+      POSTGRES_PASSWORD: damach
+      PGDATA: /data/postgres
+    volumes:
+      - postgres:/data/postgres
+    ports:
+      - "5432:5432"
+    networks:
+      - microservices-knet
+    restart: unless-stopped
+  
+  # Config server
+  config-server:
+    build: ../config-server
+    container_name: config-server
+    ports:
+      - "8888:8888"
+    networks:
+      - microservices-knet
+    environment:
+      - SPRING_PROFILES_ACTIVE=native
+  
+  # Eureka Discovery Server
+  discovery-service:
+    build: ../discovery-service
+    container_name: discovery-service
+    ports:
+      - "8761:8761" # Fixed port for Eureka
+    depends_on:
+     - config-server  
+    networks:
+      - microservices-knet
+    environment:
+      - SPRING_PROFILES_ACTIVE=default
+      
+  pgadmin:
+    container_name: ms_kpgadmin
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-pgadmin4@pgadmin.org}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    volumes:
+      - pgadmin:/var/lib/pgadmin
+    ports:
+      - "5050:80"
+    networks:
+      - microservices-knet
+    restart: unless-stopped
+      
+
+  customer-db:
+    image: postgres
+    container_name: customer-db
+    environment:
+      POSTGRES_USER: damach
+      POSTGRES_PASSWORD: damach
+      POSTGRES_DB: kcustomerdb
+    ports:
+      - "5433:5432"
+    networks:
+      - microservices-knet
+    restart: unless-stopped
+
+  customer-service:
+    build:
+      context: ../customer-service
+    container_name: customer-service
+    environment:
+      SPRING_PROFILES_ACTIVE: default
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-service:8761/eureka
+      SPRING_DATASOURCE_URL: jdbc:postgresql://customer-db:5432/kcustomerdb
+      SPRING_DATASOURCE_USERNAME: damach
+      SPRING_DATASOURCE_PASSWORD: damach
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "*"
+      SPRING_JPA_OPEN_IN_VIEW: "true"
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: 10
+    depends_on:
+      - discovery-service
+      - customer-db
+    ports:
+      - "8051:8051"
+    networks:
+      - microservices-knet
+  
+volumes:
+  postgres:
+  pgadmin:
+
+networks:
+  microservices-knet:
+    

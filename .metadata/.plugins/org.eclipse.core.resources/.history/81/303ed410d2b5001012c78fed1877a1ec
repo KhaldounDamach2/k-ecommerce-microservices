@@ -1,0 +1,102 @@
+package com.dam.k_ecommerce.service;
+
+import org.springframework.stereotype.Service;
+
+import com.dam.k_ecommerce.dto.CartItemResponse;
+import com.dam.k_ecommerce.dto.CartRequest;
+import com.dam.k_ecommerce.dto.CartResponse;
+import com.dam.k_ecommerce.dto.OrderDto;
+import com.dam.k_ecommerce.dto.OrderLineRequest;
+import com.dam.k_ecommerce.dto.OrderRequest;
+import com.dam.k_ecommerce.dto.PurchaseRequest;
+import com.dam.k_ecommerce.exception.BusinessException;
+import com.dam.k_ecommerce.mapper.OrderLineMapper;
+import com.dam.k_ecommerce.mapper.OrderMapper;
+import com.dam.k_ecommerce.model.Order;
+import com.dam.k_ecommerce.order.webClient.CustomerClient;
+import com.dam.k_ecommerce.order.webClient.ProductClient;
+import com.dam.k_ecommerce.repository.OrderRepository;
+
+import jakarta.transaction.Transactional;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import java.math.BigDecimal;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+public class OrderService {
+	
+	private final OrderRepository orderRepository;
+	private final CustomerClient customerClient;
+	 private final ProductClient productClient;
+	 private final OrderMapper mapper;
+	private final OrderLineService orderLineService;
+	private final OrderLineMapper orderLineMapper;
+	
+	 @Transactional
+	public Long createOrder(@Valid OrderRequest request) {
+		
+		// check the customer  (customer-service) OpenFeign Client
+		var customer = this.customerClient.findCustomerById(request.customerId())
+			    .orElseThrow(() -> new BusinessException("Cannot create order:: No Customer exist with ID: " + request.customerId()));
+		
+		
+		// Purchase the product variant (product-service)  (RestTemplate)
+		this.productClient.purchaseVariant(request.prodVariants().get(0));
+		
+		//persist the order (order-service)
+		var order = this.orderRepository.save(mapper.toOrder(request));
+		
+		
+		orderLineService.saveOrderLine(new OrderLineRequest(
+			null,
+				order.getId(),
+				request.prodVariants().get(0).prodVariantId(),
+				request.prodVariants().get(0).quantity(),
+				request.prodVariants().get(0).price()
+				)
+				);				
+		
+		//persist the Cart items (order-service)
+		
+		
+		
+		// start the payment process (payment-service)
+		
+		
+		
+		// send the order confirmation (notification-service) (kafka)
+		return order.getId();
+	}
+	 
+	 @Transactional
+		public CartResponse createOrderfromCart(@Valid CartRequest cartRequest) {
+		 	// check the customer  (customer-service) OpenFeign Client
+		 var customer = this.customerClient.findCustomerById(cartRequest.buyerId())
+				                 .orElseThrow(() -> new BusinessException("Cannot create order:: No Customer exist with ID: " + cartRequest.buyerId()));
+		 
+//NEW   Calculate total price from cart items
+		    BigDecimal totalPrice = cartRequest.cartItems().stream()
+		        .map(item -> item.price().multiply(BigDecimal.valueOf(item.quantity())))
+		        .reduce(BigDecimal.ZERO, BigDecimal::add);
+		 
+		 
+		 // mapping the CartResponse to Order
+		 Order order = mapper.toOrder(cartRequest);
+		 
+//NEW Set the calculated total price to the order
+		    order.setTotalAmount(totalPrice);
+		 
+		 
+		 // persist the order (order-service)
+		 Order savedOrder = orderRepository.save(order);
+		
+		 
+		
+		 
+		 
+			return null;
+		}
+
+}

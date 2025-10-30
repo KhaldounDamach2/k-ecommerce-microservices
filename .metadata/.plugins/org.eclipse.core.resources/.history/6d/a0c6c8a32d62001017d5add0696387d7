@@ -1,0 +1,31 @@
+
+package com.dam.k_ecommerce.cart.webClient;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+
+import lombok.RequiredArgsConstructor;
+
+@Service
+@RequiredArgsConstructor
+public class CartCustomerClient {
+
+    private final RestTemplate restTemplate;
+
+    @Value("${application.config.customer-url}")
+    private String customerServiceUrl;
+
+    public Long findById(Long customerId) {
+        String url = customerServiceUrl + "/cart/" + customerId;
+        try {
+            Long response = restTemplate.getForObject(url, Long.class);
+            if (response == null) {
+                throw new IllegalArgumentException("Kunde mit ID " + customerId + " nicht gefunden.");
+            }
+            return response;
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Fehler beim Abrufen des Kunden mit ID " + customerId, e);
+        }
+    }
+}

@@ -1,0 +1,65 @@
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://product-db:5432/kproductdb
+    username: damach
+    password: damach
+  cloud:
+    compatibility-verifier:
+      enabled: false  
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    database: postgresql
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+
+  flyway:
+    baseline-on-migrate: true
+    enabled: true
+    baseline-description: "init"
+    baseline-version: 0
+    user: ${spring.datasource.username}
+    password: ${spring.datasource.password}
+
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+  config:
+    import: optional:file:.env[.properties]
+    
+# Add these new properties for file handling
+app:
+  upload:
+    dir: ${APP_UPLOAD_DIR}/
+  csv:
+    dir: ${APP_CSV_DIR}/    
+
+eureka:
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: http://discovery-service:8761/eureka/
+
+server:
+  port: 8052
+  servlet:
+    context-path: /product-service
+    
+application:
+  config:
+    cart-url: http://cart-service:8053/cart-service/api/v1/carts
+    order-url: http://order-service:8054/order-service/api/v1/orders
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always

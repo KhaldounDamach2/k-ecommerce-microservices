@@ -1,0 +1,5 @@
+Client Name,Email,Phone,Category Name,Category Description,Product Name,Product Description,SKU,Price,Stock,Manufacture Date,Model,Attribute Names,Attribute Values,Image URLs,Alt Text
+Nike,nike@gmail.com,1234564566,sports shoes,runing and football,nike gordan,basketBall shoe,black-43-123,200,20,1995-06-07,with strps,"color,size","black,43","nike1.jpg,nike2.jpg","very nice,very comfotable"
+Nike,nike@gmail.com,1234564566,sports shoes,runing and football,nike gordan,football shoe,white.40-123,300,30,2000-07-10,with orang points,"color,size","white,40","nike3.jpg,nike4.jpg","very soft,cool shoe"
+Nike,nike@gmail.com,1234564566,sport T-shirt,runing and football,nike Tshirt,Tshirt for running,Blue-S-456,50,15,2000-07-10,with photo in the center,"color,size,photo","blue,S,rocket","nikeTshirt1.jpg,nikeTshirt2.jpg",cotton
+,,,,,,,,,,,,

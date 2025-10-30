@@ -1,0 +1,49 @@
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://cart-db:5432/kcartdb
+    username: damach
+    password: damach
+    
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    database: postgresql
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    
+  flyway:
+    baseline-on-migrate: true
+    enabled: true
+    baseline-description: "init"
+    baseline-version: 0
+    user: ${spring.datasource.username}
+    password: ${spring.datasource.password}
+
+eureka:
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: http://discovery-service:8761/eureka/
+
+server:
+  port: 8053
+  servlet:
+    context-path: /cart-service
+    
+application:
+  config:
+    customer-url: http://customer-service:8051/customer-service/api/v1/customers
+    product-url: http://product-service:8052/product-service/api/v1/products
+    order-url: http://order-service:8054/order-service/api/v1/orders
+    payment-url: http://payment-service:8055/payment-service/api/v1/payments
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+      base-path: /actuator  
+  endpoint:
+    health:
+      show-details: always      
